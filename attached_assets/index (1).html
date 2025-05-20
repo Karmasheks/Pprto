@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P4 System - Учет ремонтов и ТО</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+        .sidebar.collapsed {
+            width: 70px;
+        }
+        .sidebar.collapsed .sidebar-text {
+            display: none;
+        }
+        .main-content {
+            transition: all 0.3s ease;
+        }
+        .equipment-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+        }
+        .calendar-day.has-event {
+            background-color: #EFF6FF;
+        }
+        .calendar-day.event-due {
+            background-color: #FEE2E2;
+        }
+        .calendar-day.event-completed {
+            background-color: #D1FAE5;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <div class="sidebar bg-blue-800 text-white w-64 flex flex-col">
+            <div class="p-4 flex items-center justify-between border-b border-blue-700">
+                <div class="flex items-center">
+                    <i class="fas fa-cogs text-2xl mr-3"></i>
+                    <span class="sidebar-text text-xl font-bold">Победит 4</span>
+                </div>
+                <button id="toggleSidebar" class="text-white hover:text-blue-200">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <nav class="p-4">
+                    <div class="mb-6">
+                        <p class="sidebar-text uppercase text-xs font-semibold text-blue-300 mb-2">Основное</p>
+                        <a href="#" class="flex items-center py-2 px-3 rounded-lg bg-blue-700 text-white mb-2">
+                            <i class="fas fa-tachometer-alt mr-3"></i>
+                            <span class="sidebar-text">Главная</span>
+                        </a>
+                        <a href="#" class="flex items-center py-2 px-3 rounded-lg hover:bg-blue-700 text-white mb-2">
+                            <i class="fas fa-calendar-alt mr-3"></i>
+                            <span class="sidebar-text">График ТО</span>
+                            <span class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">3</span>
+                        </a>
+                        <a href="#" class="flex items-center py-2 px-3 rounded-lg hover:bg-blue-700 text-white mb-2">
+                            <i class="fas fa-tools mr-3"></i>
+                            <span class="sidebar-text">Оборудование</span>
+                        </a>
+                         <a href="#" class="flex items-center py-2 px-3 rounded-lg hover:bg-blue-700 text-white mb-2">
+                            <i class="fas fa-eye"></i>
+                            <span class="sidebar-text">Ежедневный осмотр</span>
+                        </a>
+                    </div>
+                    <div class="mb-6">
+                        <p class="sidebar-text uppercase text-xs font-semibold text-blue-300 mb-2">Учет</p>
+                        <a href="#" class="flex items-center py-2 px-3 rounded-lg hover:bg-blue-700 text-white mb-2">
+                            <i class="fas fa-wrench mr-3"></i>
+                            <span class="sidebar-text">Ремонтные работы</span>
+                        </a>
+                        <a href="#" class="flex items-center py-2 px-3 rounded-lg hover:bg-blue-700 text-white mb-2">
+                            <i class="fas fa-clipboard-check mr-3"></i>
+                            <span class="sidebar-text">Техническое обслуживание</span>
+                        </a>
+                        <a href="#" class="flex items-center py-2 px-3 rounded-lg hover:bg-blue-700 text-white mb-2">
+                            <i class="fas fa-chart-line mr-3"></i>
+                            <span class="sidebar-text">Отчеты</span>
+                        </a>
+                    </div>
+                    <div class="mb-6">
+                        <p class="sidebar-text uppercase text-xs font-semibold text-blue-300 mb-2">Настройки</p>
+                        <a href="#" class="flex items-center py-2 px-3 rounded-lg hover:bg-blue-700 text-white mb-2">
+                            <i class="fas fa-bell mr-3"></i>
+                            <span class="sidebar-text">Оповещения</span>
+                        </a>
+                        <a href="#" class="flex items-center py-2 px-3 rounded-lg hover:bg-blue-700 text-white mb-2">
+                            <i class="fas fa-users-cog mr-3"></i>
+                            <span class="sidebar-text">Пользователи</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+            <div class="p-4 border-t border-blue-700">
+                <div class="flex items-center">
+                    <img src="https://academy.starline.ru/upload/main/3d7/3d781c35a80756120dc550c6318572da.jpg" alt="User" class="w-10 h-10 rounded-full mr-3">
+                    <div class="sidebar-text">
+                        <p class="font-medium">Никита</p>
+                        <p class="text-xs text-blue-300">Администратор</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content flex-1 overflow-auto">
+            <!-- Header -->
+            <header class="bg-white shadow-sm py-4 px-6 flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-gray-800">Главная панель</h1>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <button class="p-2 rounded-full hover:bg-gray-100 relative">
+                            <i class="fas fa-bell text-gray-600"></i>
+                            <span class="notification-badge bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">5</span>
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <input type="text" placeholder="Поиск..." class="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="p-6">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                                <i class="fas fa-tools text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Всего оборудования</p>
+                                <h3 class="text-2xl font-bold">42</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                                <i class="fas fa-check-circle text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Выполнено ТО</p>
+                                <h3 class="text-2xl font-bold">28</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                                <i class="fas fa-exclamation-triangle text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Просрочено ТО</p>
+                                <h3 class="text-2xl font-bold">3</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
+                                <i class="fas fa-wrench text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Текущие ремонты</p>
+                                <h3 class="text-2xl font-bold">5</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Equipment and Calendar -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <!-- Equipment List -->
+                    <div class="lg:col-span-2 bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4 border-b flex justify-between items-center">
+                            <h2 class="text-lg font-semibold">Оборудование</h2>
+                            <button onclick="openAddEquipmentModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                                <i class="fas fa-plus mr-2"></i> Добавить
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Название</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Тип</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Статус</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Последнее ТО</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200" id="equipmentTableBody">
+                                    <!-- Equipment rows will be added here by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Maintenance Calendar -->
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4 border-b">
+                            <h2 class="text-lg font-semibold">График ТО</h2>
+                        </div>
+                        <div class="p-4">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-medium">Июнь 2025</h3>
+                                <div class="flex space-x-2">
+                                    <button class="p-2 rounded-full hover:bg-gray-100">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                    <button class="p-2 rounded-full hover:bg-gray-100">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-7 gap-1 mb-2">
+                                <div class="text-center text-xs font-medium text-gray-500">Пн</div>
+                                <div class="text-center text-xs font-medium text-gray-500">Вт</div>
+                                <div class="text-center text-xs font-medium text-gray-500">Ср</div>
+                                <div class="text-center text-xs font-medium text-gray-500">Чт</div>
+                                <div class="text-center text-xs font-medium text-gray-500">Пт</div>
+                                <div class="text-center text-xs font-medium text-gray-500">Сб</div>
+                                <div class="text-center text-xs font-medium text-gray-500">Вс</div>
+                            </div>
+                            <div class="grid grid-cols-7 gap-1" id="calendarDays">
+                                <!-- Calendar days will be added here by JavaScript -->
+                            </div>
+                        </div>
+                        <div class="p-4 border-t">
+                            <h3 class="font-medium mb-2">Предстоящие ТО</h3>
+                            <div class="space-y-3" id="upcomingMaintenance">
+                                <!-- Upcoming maintenance items will be added here by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold">Статистика ТО по месяцам</h2>
+                            <select class="border rounded-lg px-3 py-1 text-sm">
+                              <option>2025</option>
+                              <option>2024</option>
+                                <option>2023</option>
+                                <option>2022</option>
+                                <option>2021</option>
+                            </select>
+                        </div>
+                        <canvas id="maintenanceChart" height="250"></canvas>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold">Статус оборудования</h2>
+                        </div>
+                        <canvas id="equipmentStatusChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Equipment Modal -->
+    <div id="addEquipmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-semibold">Добавить новое оборудование</h3>
+                <button onclick="closeAddEquipmentModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="equipmentForm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Название оборудования</label>
+                            <input type="text" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Тип оборудования</label>
+                            <select class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                <option value="">Выберите тип</option>
+                                <option>Станок</option>
+                                <option>Конвейер</option>
+                                <option>Компрессор</option>
+                                <option>Генератор</option>
+                                <option>Насос</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Серийный номер</label>
+                            <input type="text" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Инвентарный номер</label>
+                            <input type="text" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Дата ввода в эксплуатацию</label>
+                            <input type="date" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Периодичность ТО (дни)</label>
+                            <input type="number" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" value="30" required>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Описание</label>
+                            <textarea class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="p-4 border-t flex justify-end space-x-3">
+                <button onclick="closeAddEquipmentModal()" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Отмена</button>
+                <button onclick="saveEquipment()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Equipment Modal -->
+    <div id="editEquipmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-semibold">Редактировать оборудование</h3>
+                <button onclick="closeEditEquipmentModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="editEquipmentForm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Название оборудования</label>
+                            <input type="text" id="editName" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Тип оборудования</label>
+                            <select id="editType" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                <option value="">Выберите тип</option>
+                                <option>Станок</option>
+                                <option>Конвейер</option>
+                                <option>Компрессор</option>
+                                <option>Генератор</option>
+                                <option>Насос</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Серийный номер</label>
+                            <input type="text" id="editSerial" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Инвентарный номер</label>
+                            <input type="text" id="editInventory" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Дата ввода в эксплуатацию</label>
+                            <input type="date" id="editCommissionDate" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Периодичность ТО (дни)</label>
+                            <input type="number" id="editMaintenanceInterval" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Описание</label>
+                            <textarea id="editDescription" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="p-4 border-t flex justify-end space-x-3">
+                <button onclick="closeEditEquipmentModal()" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Отмена</button>
+                <button onclick="updateEquipment()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Сохранить изменения</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Maintenance Details Modal -->
+    <div id="maintenanceModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-semibold">Техническое обслуживание</h3>
+                <button onclick="closeMaintenanceModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <h4 class="font-medium text-lg mb-2" id="maintenanceEquipmentName">Токарный станок CNC-2000</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Дата последнего ТО</p>
+                            <p class="font-medium" id="lastMaintenanceDate">15.05.2023</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Следующее ТО</p>
+                            <p class="font-medium" id="nextMaintenanceDate">15.06.2023</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Статус</p>
+                            <p class="font-medium">
+                                <span id="maintenanceStatus" class="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Запланировано</span>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Ответственный</p>
+                            <p class="font-medium" id="maintenanceResponsible">Иванов А.П.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <h4 class="font-medium mb-3">Запланировать ТО</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Дата ТО</label>
+                            <input type="date" id="maintenanceDate" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Ответственный</label>
+                            <select id="maintenanceResponsibleSelect" class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option>Купцов Д.</option>
+                                <option>Петров И.С.</option>
+                                <option>Пырихин И.В.</option>
+                                <option>Кузнецова Е.В.</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-medium mb-3">Выполненные работы</h4>
+                    <div class="space-y-4" id="maintenanceTasks">
+                        <!-- Maintenance tasks will be added here by JavaScript -->
+                    </div>
+                    <button onclick="addMaintenanceTask()" class="mt-4 flex items-center text-blue-600 hover:text-blue-800">
+                        <i class="fas fa-plus mr-2"></i> Добавить работу
+                    </button>
+                </div>
+            </div>
+            <div class="p-4 border-t flex justify-between">
+                <button onclick="markMaintenanceAsCompleted()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    <i class="fas fa-check mr-2"></i> Завершить ТО
+                </button>
+                <div class="flex space-x-3">
+                    <button onclick="closeMaintenanceModal()" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Отмена</button>
+                    <button onclick="saveMaintenance()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data for equipment
+        const equipmentData = [
+            {
+                id: 1,
+                name: "5-ти осевой фрезерный центр Nmill 1400 (Niles Simmons)",
+                type: "Станок",
+                serial: "CNC2000-001",
+                inventory: "INV-1001",
+                status: "active",
+                lastMaintenance: "2023-05-15",
+                nextMaintenance: "2023-06-15",
+                maintenanceInterval: 30,
+                description: "5-ти осевой фрезерный центр."
+            },
+            {
+                id: 2,
+                name: "3-х осевой фрезерный центр Mikron HPM 600HD (GF+)",
+                type: "Станок",
+                serial: "CONV-A12-045",
+                inventory: "INV-1042",
+                status: "active",
+                lastMaintenance: "2023-05-20",
+                nextMaintenance: "2023-06-20",
+                maintenanceInterval: 30,
+                description: "3-х осевой фрезерный центр"
+            },
+            {
+                id: 3,
+                name: "5-ти осевой фрезерный центр Versa 645 Linear (Fehlmann)",
+                type: "Станок",
+                serial: "COMP-V50-112",
+                inventory: "INV-1078",
+                status: "maintenance",
+                lastMaintenance: "2023-04-10",
+                nextMaintenance: "2023-06-10",
+                maintenanceInterval: 60,
+                description: "5-ти осевой фрезерный центр"
+            },
+            {
+                id: 4,
+                name: "Электроэрозионный прошивной станок Mitsubishi EA12V Advance",
+                type: "Станок",
+                serial: "GEN-DG5000-008",
+                inventory: "INV-1123",
+                status: "active",
+                lastMaintenance: "2023-05-01",
+                nextMaintenance: "2023-08-01",
+                maintenanceInterval: 90,
+                description: "Электроэрозионный прошивной станок"
+            },
+            {
+                id: 5,
+                name: "Токарный станок ЧПУ Seiger SLZ 420-Е",
+                type: "Станок",
+                serial: "PUMP-NP200-156",
+                inventory: "INV-1156",
+                status: "repair",
+                lastMaintenance: "2023-03-15",
+                nextMaintenance: "2023-06-15",
+                maintenanceInterval: 90,
+                description: "Токарный станок"
+            }
+        ];
+
+        // Sample data for maintenance events
+        const maintenanceEvents = [
+            { equipmentId: 1, date: "2023-06-15", status: "planned", responsible: "Иванов А.П." },
+            { equipmentId: 2, date: "2023-06-20", status: "planned", responsible: "Петров И.С." },
+            { equipmentId: 3, date: "2023-06-10", status: "overdue", responsible: "Сидоров В.М." },
+            { equipmentId: 4, date: "2023-08-01", status: "planned", responsible: "Кузнецова Е.В." },
+            { equipmentId: 5, date: "2023-06-15", status: "planned", responsible: "Иванов А.П." },
+            { equipmentId: 1, date: "2023-05-15", status: "completed", responsible: "Иванов А.П." },
+            { equipmentId: 2, date: "2023-05-20", status: "completed", responsible: "Петров И.С." },
+            { equipmentId: 3, date: "2023-04-10", status: "completed", responsible: "Сидоров В.М." },
+            { equipmentId: 4, date: "2023-05-01", status: "completed", responsible: "Кузнецова Е.В." },
+            { equipmentId: 5, date: "2023-03-15", status: "completed", responsible: "Иванов А.П." }
+        ];
+
+        // Sample data for maintenance tasks
+        const maintenanceTasks = {
+            1: [
+                { id: 1, description: "Проверка и регулировка ЧПУ", completed: true },
+                { id: 2, description: "Смазка направляющих", completed: true },
+                { id: 3, description: "Замена фильтров", completed: true }
+            ],
+            2: [
+                { id: 1, description: "Проверка натяжения ленты", completed: true },
+                { id: 2, description: "Смазка роликов", completed: true }
+            ],
+            3: [
+                { id: 1, description: "Замена масла", completed: true },
+                { id: 2, description: "Проверка давления", completed: false }
+            ]
+        };
+
+        // Current month and year for calendar
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth();
+        const currentYear = currentDate.getFullYear();
+
+        // DOM elements
+        const equipmentTableBody = document.getElementById('equipmentTableBody');
+        const calendarDays = document.getElementById('calendarDays');
+        const upcomingMaintenance = document.getElementById('upcomingMaintenance');
+        let currentEditingEquipmentId = null;
+
+        // Initialize the application
+        function init() {
+            renderEquipmentTable();
+            renderCalendar();
+            renderUpcomingMaintenance();
+            initCharts();
+            setupEventListeners();
+        }
+
+        // Render equipment table
+        function renderEquipmentTable() {
+            equipmentTableBody.innerHTML = '';
+            
+            equipmentData.forEach(equipment => {
+                const row = document.createElement('tr');
+                
+                // Determine status badge color
+                let statusBadge = '';
+                if (equipment.status === 'active') {
+                    statusBadge = '<span class="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Активно</span>';
+                } else if (equipment.status === 'maintenance') {
+                    statusBadge = '<span class="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">ТО</span>';
+                } else if (equipment.status === 'repair') {
+                    statusBadge = '<span class="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">Ремонт</span>';
+                }
+                
+                // Format dates
+                const lastMaintenanceDate = formatDate(equipment.lastMaintenance);
+                const nextMaintenanceDate = formatDate(equipment.nextMaintenance);
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${equipment.id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${equipment.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${equipment.type}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${statusBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${lastMaintenanceDate}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button onclick="openMaintenanceModal(${equipment.id})" class="text-blue-600 hover:text-blue-900 mr-3">
+                            <i class="fas fa-calendar-alt"></i>
+                        </button>
+                        <button onclick="openEditEquipmentModal(${equipment.id})" class="text-yellow-600 hover:text-yellow-900 mr-3">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteEquipment(${equipment.id})" class="text-red-600 hover:text-red-900">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                
+                equipmentTableBody.appendChild(row);
+            });
+        }
+
+        // Render calendar
+        function renderCalendar() {
+            calendarDays.innerHTML = '';
+            
+            // Get first day of month and total days in month
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            
+            // Adjust for Monday as first day (0 = Sunday, 1 = Monday, etc.)
+            const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+            
+            // Add empty cells for days before the first day of the month
+            for (let i = 0; i < adjustedFirstDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'h-10';
+                calendarDays.appendChild(emptyCell);
+            }
+            
+            // Add cells for each day of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const cell = document.createElement('div');
+                cell.className = 'h-10 flex items-center justify-center border rounded cursor-pointer calendar-day';
+                
+                // Check if this day has any maintenance events
+                const events = maintenanceEvents.filter(event => event.date === dateStr);
+                
+                if (events.length > 0) {
+                    const statuses = events.map(event => event.status);
+                    
+                    if (statuses.includes('overdue')) {
+                        cell.classList.add('event-due');
+                    } else if (statuses.includes('completed')) {
+                        cell.classList.add('event-completed');
+                    } else {
+                        cell.classList.add('has-event');
+                    }
+                    
+                    // Add tooltip with equipment names
+                    const equipmentNames = events.map(event => {
+                        const equipment = equipmentData.find(e => e.id === event.equipmentId);
+                        return equipment ? equipment.name : '';
+                    }).filter(name => name !== '');
+                    
+                    cell.setAttribute('title', equipmentNames.join('\n'));
+                }
+                
+                cell.textContent = day;
+                cell.onclick = () => showDayEvents(day);
+                calendarDays.appendChild(cell);
+            }
+        }
+
+        // Render upcoming maintenance
+        function renderUpcomingMaintenance() {
+            upcomingMaintenance.innerHTML = '';
+            
+            // Get today's date in YYYY-MM-DD format
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Filter maintenance events that are upcoming or overdue
+            const upcomingEvents = maintenanceEvents.filter(event => {
+                return event.status !== 'completed' && (event.date >= today || event.status === 'overdue');
+            }).sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // Limit to 5 events
+            const eventsToShow = upcomingEvents.slice(0, 5);
+            
+            eventsToShow.forEach(event => {
+                const equipment = equipmentData.find(e => e.id === event.equipmentId);
+                if (!equipment) return;
+                
+                const eventDate = new Date(event.date);
+                const today = new Date();
+                const diffTime = eventDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                let daysText = '';
+                if (diffDays < 0) {
+                    daysText = `<span class="text-red-500">Просрочено на ${Math.abs(diffDays)} дн.</span>`;
+                } else if (diffDays === 0) {
+                    daysText = '<span class="text-yellow-600">Сегодня</span>';
+                } else {
+                    daysText = `Через ${diffDays} дн.`;
+                }
+                
+                const eventElement = document.createElement('div');
+                eventElement.className = 'p-3 border rounded-lg hover:bg-gray-50 cursor-pointer';
+                eventElement.onclick = () => openMaintenanceModal(event.equipmentId);
+                
+                eventElement.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-medium">${equipment.name}</h4>
+                            <p class="text-sm text-gray-500">${equipment.type}</p>
+                        </div>
+                        <span class="text-sm">${daysText}</span>
+                    </div>
+                    <div class="mt-2 flex justify-between items-center">
+                        <span class="text-sm">${formatDate(event.date)}</span>
+                        <span class="text-sm">${event.responsible}</span>
+                    </div>
+                `;
+                
+                upcomingMaintenance.appendChild(eventElement);
+            });
+            
+            if (eventsToShow.length === 0) {
+                upcomingMaintenance.innerHTML = '<p class="text-gray-500 text-center py-4">Нет предстоящих ТО</p>';
+            }
+        }
+
+        // Initialize charts
+        function initCharts() {
+            // Maintenance by month chart
+            const maintenanceCtx = document.getElementById('maintenanceChart').getContext('2d');
+            new Chart(maintenanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+                    datasets: [
+                        {
+                            label: 'Запланировано',
+                            data: [5, 7, 6, 8, 10, 12, 8, 7, 6, 9, 7, 5],
+                            backgroundColor: '#3B82F6',
+                        },
+                        {
+                            label: 'Выполнено',
+                            data: [5, 6, 5, 7, 9, 8, 6, 5, 4, 7, 5, 4],
+                            backgroundColor: '#10B981',
+                        },
+                        {
+                            label: 'Просрочено',
+                            data: [0, 1, 1, 1, 1, 3, 2, 2, 2, 2, 2, 1],
+                            backgroundColor: '#EF4444',
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                    },
+                    scales: {
+                        x: {
+                            stacked: false,
+                        },
+                        y: {
+                            stacked: false,
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // Equipment status chart
+            const statusCtx = document.getElementById('equipmentStatusChart').getContext('2d');
+            new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Активно', 'На ТО', 'В ремонте', 'Резерв'],
+                    datasets: [{
+                        data: [32, 5, 3, 2],
+                        backgroundColor: [
+                            '#10B981',
+                            '#F59E0B',
+                            '#EF4444',
+                            '#6B7280'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        }
+                    }
+                }
+            });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Toggle sidebar
+            document.getElementById('toggleSidebar').addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.toggle('collapsed');
+                document.querySelector('.main-content').classList.toggle('ml-16');
+                document.querySelector('.main-content').classList.toggle('ml-64');
+            });
+        }
+
+        // Format date to DD.MM.YYYY
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}.${month}.${year}`;
+        }
+
+        // Show events for a specific day
+        function showDayEvents(day) {
+            const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const events = maintenanceEvents.filter(event => event.date === dateStr);
+            
+            if (events.length === 0) {
+                Swal.fire({
+                    title: `${day} ${getMonthName(currentMonth)} ${currentYear}`,
+                    text: 'На этот день не запланировано ТО',
+                    icon: 'info'
+                });
+                return;
+            }
+            
+            let html = `<h3 class="font-bold mb-2">${day} ${getMonthName(currentMonth)} ${currentYear}</h3>`;
+            html += '<div class="space-y-2">';
+            
+            events.forEach(event => {
+                const equipment = equipmentData.find(e => e.id === event.equipmentId);
+                if (!equipment) return;
+                
+                let statusBadge = '';
+                if (event.status === 'planned') {
+                    statusBadge = '<span class="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Запланировано</span>';
+                } else if (event.status === 'overdue') {
+                    statusBadge = '<span class="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">Просрочено</span>';
+                } else if (event.status === 'completed') {
+                    statusBadge = '<span class="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Выполнено</span>';
+                }
+                
+                html += `
+                    <div class="p-3 border rounded-lg">
+                        <div class="flex justify-between items-center mb-1">
+                            <h4 class="font-medium">${equipment.name}</h4>
+                            ${statusBadge}
+                        </div>
+                        <p class="text-sm text-gray-600">${equipment.type}</p>
+                        <p class="text-sm mt-1">Ответственный: ${event.responsible}</p>
+                        <button onclick="openMaintenanceModal(${equipment.id})" class="mt-2 text-sm text-blue-600 hover:text-blue-800">
+                            Подробнее <i class="fas fa-chevron-right ml-1"></i>
+                        </button>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            Swal.fire({
+                html: html,
+                showConfirmButton: false,
+                width: '500px'
+            });
+        }
+
+        // Get month name
+        function getMonthName(monthIndex) {
+            const months = [
+                'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+            ];
+            return months[monthIndex];
+        }
+
+        // Open add equipment modal
+        function openAddEquipmentModal() {
+            document.getElementById('addEquipmentModal').classList.remove('hidden');
+        }
+
+        // Close add equipment modal
+        function closeAddEquipmentModal() {
+            document.getElementById('addEquipmentModal').classList.add('hidden');
+            document.getElementById('equipmentForm').reset();
+        }
+
+        // Save new equipment
+        function saveEquipment() {
+            const form = document.getElementById('equipmentForm');
+            const formData = new FormData(form);
+            
+            // Validate form
+            let isValid = true;
+            form.querySelectorAll('[required]').forEach(input => {
+                if (!input.value) {
+                    input.classList.add('border-red-500');
+                    isValid = false;
+                } else {
+                    input.classList.remove('border-red-500');
+                }
+            });
+            
+            if (!isValid) {
+                Swal.fire({
+                    title: 'Ошибка',
+                    text: 'Пожалуйста, заполните все обязательные поля',
+                    icon: 'error'
+                });
+                return;
+            }
+            
+            // Create new equipment object
+            const newEquipment = {
+                id: equipmentData.length + 1,
+                name: formData.get('name'),
+                type: formData.get('type'),
+                serial: formData.get('serial'),
+                inventory: formData.get('inventory'),
+                status: 'active',
+                lastMaintenance: '',
+                nextMaintenance: calculateNextMaintenanceDate(formData.get('commissionDate'), formData.get('maintenanceInterval')),
+                maintenanceInterval: parseInt(formData.get('maintenanceInterval')),
+                description: formData.get('description')
+            };
+            
+            // Add to equipment data
+            equipmentData.push(newEquipment);
+            
+            // Close modal and refresh table
+            closeAddEquipmentModal();
+            renderEquipmentTable();
+            
+            Swal.fire({
+                title: 'Успешно',
+                text: 'Оборудование добавлено',
+                icon: 'success'
+            });
+        }
+
+        // Calculate next maintenance date
+        function calculateNextMaintenanceDate(commissionDate, intervalDays) {
+            if (!commissionDate) return '';
+            
+            const intervalMs = parseInt(intervalDays) * 24 * 60 * 60 * 1000;
+            const nextDate = new Date(new Date(commissionDate).getTime() + intervalMs);
+            return nextDate.toISOString().split('T')[0];
+        }
+
+        // Open edit equipment modal
+        function openEditEquipmentModal(id) {
+            const equipment = equipmentData.find(e => e.id === id);
+            if (!equipment) return;
+            
+            currentEditingEquipmentId = id;
+            
+            document.getElementById('editName').value = equipment.name;
+            document.getElementById('editType').value = equipment.type;
+            document.getElementById('editSerial').value = equipment.serial;
+            document.getElementById('editInventory').value = equipment.inventory;
+            document.getElementById('editCommissionDate').value = equipment.commissionDate || '';
+            document.getElementById('editMaintenanceInterval').value = equipment.maintenanceInterval;
+            document.getElementById('editDescription').value = equipment.description || '';
+            
+            document.getElementById('editEquipmentModal').classList.remove('hidden');
+        }
+
+        // Close edit equipment modal
+        function closeEditEquipmentModal() {
+            document.getElementById('editEquipmentModal').classList.add('hidden');
+            currentEditingEquipmentId = null;
+        }
+
+        // Update equipment
+        function updateEquipment() {
+            const equipment = equipmentData.find(e => e.id === currentEditingEquipmentId);
+            if (!equipment) return;
+            
+            equipment.name = document.getElementById('editName').value;
+            equipment.type = document.getElementById('editType').value;
+            equipment.serial = document.getElementById('editSerial').value;
+            equipment.inventory = document.getElementById('editInventory').value;
+            equipment.commissionDate = document.getElementById('editCommissionDate').value;
+            equipment.maintenanceInterval = parseInt(document.getElementById('editMaintenanceInterval').value);
+            equipment.description = document.getElementById('editDescription').value;
+            
+            // Close modal and refresh table
+            closeEditEquipmentModal();
+            renderEquipmentTable();
+            
+            Swal.fire({
+                title: 'Успешно',
+                text: 'Изменения сохранены',
+                icon: 'success'
+            });
+        }
+
+        // Delete equipment
+        function deleteEquipment(id) {
+            Swal.fire({
+                title: 'Удалить оборудование?',
+                text: 'Вы уверены, что хотите удалить это оборудование? Это действие нельзя отменить.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Да, удалить',
+                cancelButtonText: 'Отмена'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const index = equipmentData.findIndex(e => e.id === id);
+                    if (index !== -1) {
+                        equipmentData.splice(index, 1);
+                        renderEquipmentTable();
+                        
+                        Swal.fire(
+                            'Удалено!',
+                            'Оборудование было удалено.',
+                            'success'
+                        );
+                    }
+                }
+            });
+        }
+
+        // Open maintenance modal
+        function openMaintenanceModal(equipmentId) {
+            const equipment = equipmentData.find(e => e.id === equipmentId);
+            if (!equipment) return;
+            
+            // Find current maintenance event
+            const maintenanceEvent = maintenanceEvents.find(event => 
+                event.equipmentId === equipmentId && 
+                (event.status === 'planned' || event.status === 'overdue')
+            );
+            
+            // Set equipment info
+            document.getElementById('maintenanceEquipmentName').textContent = equipment.name;
+            document.getElementById('lastMaintenanceDate').textContent = formatDate(equipment.lastMaintenance);
+            document.getElementById('nextMaintenanceDate').textContent = formatDate(equipment.nextMaintenance);
+            
+            // Set status
+            const statusElement = document.getElementById('maintenanceStatus');
+            statusElement.textContent = maintenanceEvent ? 
+                (maintenanceEvent.status === 'overdue' ? 'Просрочено' : 'Запланировано') : 
+                'Не запланировано';
+            
+            statusElement.className = 'px-2 py-1 rounded-full text-xs font-semibold ' + 
+                (maintenanceEvent ? 
+                    (maintenanceEvent.status === 'overdue' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800') : 
+                    'bg-gray-100 text-gray-800');
+            
+            // Set responsible
+            document.getElementById('maintenanceResponsible').textContent = 
+                maintenanceEvent ? maintenanceEvent.responsible : 'Не назначен';
+            
+            if (maintenanceEvent) {
+                document.getElementById('maintenanceDate').value = maintenanceEvent.date;
+                document.getElementById('maintenanceResponsibleSelect').value = maintenanceEvent.responsible;
+            } else {
+                document.getElementById('maintenanceDate').value = equipment.nextMaintenance;
+                document.getElementById('maintenanceResponsibleSelect').value = 'Иванов А.П.';
+            }
+            
+            // Render tasks
+            renderMaintenanceTasks(equipmentId);
+            
+            document.getElementById('maintenanceModal').classList.remove('hidden');
+        }
+
+        // Close maintenance modal
+        function closeMaintenanceModal() {
+            document.getElementById('maintenanceModal').classList.add('hidden');
+        }
+
+        // Render maintenance tasks
+        function renderMaintenanceTasks(equipmentId) {
+            const tasksContainer = document.getElementById('maintenanceTasks');
+            tasksContainer.innerHTML = '';
+            
+            const tasks = maintenanceTasks[equipmentId] || [];
+            
+            tasks.forEach((task, index) => {
+                const taskElement = document.createElement('div');
+                taskElement.className = 'flex items-start';
+                
+                taskElement.innerHTML = `
+                    <input type="checkbox" ${task.completed ? 'checked' : ''} 
+                        onchange="toggleTaskCompletion(${equipmentId}, ${task.id})" 
+                        class="mt-1 mr-3 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <div class="flex-1">
+                        <p class="${task.completed ? 'line-through text-gray-500' : ''}">${task.description}</p>
+                        <button onclick="removeTask(${equipmentId}, ${task.id})" class="mt-1 text-sm text-red-600 hover:text-red-800">
+                            <i class="fas fa-trash mr-1"></i> Удалить
+                        </button>
+                    </div>
+                `;
+                
+                tasksContainer.appendChild(taskElement);
+            });
+            
+            if (tasks.length === 0) {
+                tasksContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Нет добавленных работ</p>';
+            }
+        }
+
+        // Add maintenance task
+        function addMaintenanceTask() {
+            const equipmentId = currentEditingEquipmentId;
+            if (!equipmentId) return;
+            
+            Swal.fire({
+                title: 'Добавить работу',
+                input: 'text',
+                inputLabel: 'Описание работы',
+                inputPlaceholder: 'Введите описание работы...',
+                showCancelButton: true,
+                confirmButtonText: 'Добавить',
+                cancelButtonText: 'Отмена',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Пожалуйста, введите описание работы';
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (!maintenanceTasks[equipmentId]) {
+                        maintenanceTasks[equipmentId] = [];
+                    }
+                    
+                    const newTask = {
+                        id: maintenanceTasks[equipmentId].length + 1,
+                        description: result.value,
+                        completed: false
+                    };
+                    
+                    maintenanceTasks[equipmentId].push(newTask);
+                    renderMaintenanceTasks(equipmentId);
+                }
+            });
+        }
+
+        // Remove task
+        function removeTask(equipmentId, taskId) {
+            if (!maintenanceTasks[equipmentId]) return;
+            
+            const index = maintenanceTasks[equipmentId].findIndex(t => t.id === taskId);
+            if (index !== -1) {
+                maintenanceTasks[equipmentId].splice(index, 1);
+                renderMaintenanceTasks(equipmentId);
+            }
+        }
+
+        // Toggle task completion
+        function toggleTaskCompletion(equipmentId, taskId) {
+            if (!maintenanceTasks[equipmentId]) return;
+            
+            const task = maintenanceTasks[equipmentId].find(t => t.id === taskId);
+            if (task) {
+                task.completed = !task.completed;
+                renderMaintenanceTasks(equipmentId);
+            }
+        }
+
+        // Save maintenance
+        function saveMaintenance() {
+            const equipmentId = currentEditingEquipmentId;
+            if (!equipmentId) return;
+            
+            const equipment = equipmentData.find(e => e.id === equipmentId);
+            if (!equipment) return;
+            
+            const date = document.getElementById('maintenanceDate').value;
+            const responsible = document.getElementById('maintenanceResponsibleSelect').value;
+            
+            if (!date) {
+                Swal.fire({
+                    title: 'Ошибка',
+                    text: 'Пожалуйста, укажите дату ТО',
+                    icon: 'error'
+                });
+                return;
+            }
+            
+            // Find or create maintenance event
+            let maintenanceEvent = maintenanceEvents.find(event => 
+                event.equipmentId === equipmentId && 
+                (event.status === 'planned' || event.status === 'overdue')
+            );
+            
+            if (maintenanceEvent) {
+                maintenanceEvent.date = date;
+                maintenanceEvent.responsible = responsible;
+            } else {
+                maintenanceEvent = {
+                    equipmentId,
+                    date,
+                    status: 'planned',
+                    responsible
+                };
+                maintenanceEvents.push(maintenanceEvent);
+            }
+            
+            // Update equipment's next maintenance date
+            equipment.nextMaintenance = date;
+            
+            closeMaintenanceModal();
+            renderEquipmentTable();
+            renderCalendar();
+            renderUpcomingMaintenance();
+            
+            Swal.fire({
+                title: 'Успешно',
+                text: 'График ТО обновлен',
+                icon: 'success'
+            });
+        }
+
+        // Mark maintenance as completed
+        function markMaintenanceAsCompleted() {
+            const equipmentId = currentEditingEquipmentId;
+            if (!equipmentId) return;
+            
+            const equipment = equipmentData.find(e => e.id === equipmentId);
+            if (!equipment) return;
+            
+            // Find current maintenance event
+            const maintenanceEvent = maintenanceEvents.find(event => 
+                event.equipmentId === equipmentId && 
+                (event.status === 'planned' || event.status === 'overdue')
+            );
+            
+            if (maintenanceEvent) {
+                maintenanceEvent.status = 'completed';
+                
+                // Update equipment's last maintenance date
+                equipment.lastMaintenance = maintenanceEvent.date;
+                
+                // Calculate next maintenance date
+                const nextDate = new Date(new Date(maintenanceEvent.date).getTime() + 
+                    equipment.maintenanceInterval * 24 * 60 * 60 * 1000);
+                equipment.nextMaintenance = nextDate.toISOString().split('T')[0];
+                
+                // Add new planned maintenance event
+                maintenanceEvents.push({
+                    equipmentId,
+                    date: equipment.nextMaintenance,
+                    status: 'planned',
+                    responsible: maintenanceEvent.responsible
+                });
+                
+                closeMaintenanceModal();
+                renderEquipmentTable();
+                renderCalendar();
+                renderUpcomingMaintenance();
+                
+                Swal.fire({
+                    title: 'Успешно',
+                    text: 'ТО отмечено как выполненное',
+                    icon: 'success'
+                });
+            }
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+<p style="border-radius: 8px; text-align: center; font-size: 12px; color: #fff; margin-top: 16px;position: fixed; left: 8px; bottom: 8px; z-index: 10; background: rgba(0, 0, 0, 0.8); padding: 4px 8px;">Made with <img src="https://enzostvs-deepsite.hf.space/logo.svg" alt="DeepSite Logo" style="width: 16px; height: 16px; vertical-align: middle;display:inline-block;margin-right:3px;filter:brightness(0) invert(1);"><a href="https://enzostvs-deepsite.hf.space" style="color: #fff;text-decoration: underline;" target="_blank" >DeepSite</a> - 🧬 <a href="https://enzostvs-deepsite.hf.space?remix=Karmashek/p4-general" style="color: #fff;text-decoration: underline;" target="_blank" >Remix</a></p></body>
+</html>
